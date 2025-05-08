@@ -100,7 +100,7 @@ open_webui:
   name: open-webui
   namespace: open-webui
   chart: open-webui
-  version: 6.9.0
+  version: 6.11.0
   repository: https://helm.openwebui.com
   values:
     ollama:
@@ -124,6 +124,9 @@ open_webui:
       requests:
         cpu: 200m
         memory: 512Mi
+    persistence:
+      enabled: true
+      size: 2Gi
 
 postgresql:
   enabled: true
