@@ -14,3 +14,14 @@ resource "null_resource" "add_open_webui_repo" {
     command = "helm repo add open-webui https://helm.openwebui.com/"
   }
 } 
+
+# Add Helm repository for community-charts
+resource "null_resource" "add_community_charts_repo" {
+  triggers = {
+    always_run = "${timestamp()}"
+  }
+
+  provisioner "local-exec" {
+    command = "helm repo add community-charts https://community-charts.github.io/helm-charts"
+  }
+} 

@@ -6,10 +6,10 @@ defaults:
 namespaces:
   - ingress-nginx
   - cert-manager
-  - whoami
   - vault
   - open-webui
   - postgresql
+  - n8n
 
 ingress_nginx:
   enabled: true
@@ -55,6 +55,29 @@ cert_manager:
         name: selfsigned-issuer
       spec:
         selfSigned: {}
+
+postgresql:
+  enabled: true
+  name: postgresql
+  namespace: postgresql
+  chart: postgresql
+  version: 16.6.7
+  repository: oci://registry-1.docker.io/bitnamicharts
+  values:
+    primary:
+      persistence:
+        enabled: true
+        size: 2Gi
+        storageClass: ""
+      resources:
+        limits:
+          cpu: 500m
+          memory: 512Mi
+        requests:
+          cpu: 200m
+          memory: 256Mi
+    volumePermissions:
+      enabled: true
 
 vault:
   enabled: true
@@ -120,7 +143,7 @@ open_webui:
     resources:
       limits:
         cpu: 500m
-        memory: 1Gi
+        memory: 2Gi
       requests:
         cpu: 200m
         memory: 512Mi
@@ -128,31 +151,35 @@ open_webui:
       enabled: true
       size: 2Gi
 
-postgresql:
+n8n:
   enabled: true
-  name: postgresql
-  namespace: postgresql
-  chart: postgresql
-  version: 16.6.7
-  repository: oci://registry-1.docker.io/bitnamicharts
+  name: n8n
+  namespace: n8n
+  chart: n8n
+  version: 1.5.10
+  repository: https://community-charts.github.io/helm-charts
   values:
-    auth:
-      username: postgres
-      password: postgres
-      database: postgres
-      postgresPassword: postgres
-      replicationPassword: postgres
-    primary:
-      persistence:
-        enabled: true
-        size: 2Gi
-        storageClass: ""
+    main:
       resources:
-        limits:
-          cpu: 500m
-          memory: 512Mi
         requests:
-          cpu: 200m
-          memory: 256Mi
-    volumePermissions:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 512m
+          memory: 512Mi
+    db:
+      type: postgresdb
+    externalPostgresql:
+      host: "postgresql.postgresql.svc.cluster.local"
+    ingress:
       enabled: true
+      className: nginx
+      hosts:
+        - host: n8n.localhost
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - hosts:
+            - n8n.localhost
+          secretName: n8n-tls
