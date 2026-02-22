@@ -1,0 +1,15 @@
+# Azure Backend Configuration Example
+# Copy this block into modules/providers.tf inside the terraform {} block
+#
+# Prerequisites:
+#   - Azure Storage Account and Container created
+#   - Appropriate RBAC permissions
+
+terraform {
+  backend "azurerm" {
+    resource_group_name  = "terraform-state-rg"
+    storage_account_name = "tfstatestorageacct"
+    container_name       = "tfstate"
+    key                  = "k8s-platform/terraform.tfstate"
+  }
+}

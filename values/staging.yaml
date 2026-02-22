@@ -1,6 +1,6 @@
 defaults:
-  cluster_name: docker-desktop
-  env: dev
+  cluster_name: staging-cluster
+  env: staging
   kubeconfig_path: "~/.kube/config"
 
 namespaces:
@@ -11,7 +11,6 @@ namespaces:
   - postgresql
   - n8n
   - monitoring
-  - argocd
   - redis
 
 ingress_nginx:
@@ -24,19 +23,23 @@ ingress_nginx:
   values:
     enabled: true
     controller:
-      hostNetwork: true
       kind: Deployment
+      replicaCount: 2
       service:
         type: LoadBalancer
       metrics:
         enabled: true
       admissionWebhooks:
-        enabled: false
+        enabled: true
       ingressClassResource:
         name: nginx
-      updateStrategy:
-        type: RollingUpdate
-        rollingUpdate:
+      resources:
+        requests:
+          cpu: 200m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
 
 cert_manager:
   enabled: true
@@ -53,13 +56,13 @@ cert_manager:
       defaultIssuerKind: ClusterIssuer
     extraArgs:
       - --enable-certificate-owner-ref=true
-  postInstall:
-    - apiVersion: cert-manager.io/v1
-      kind: ClusterIssuer
-      metadata:
-        name: selfsigned-issuer
-      spec:
-        selfSigned: {}
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
 
 postgresql:
   enabled: true
@@ -72,15 +75,19 @@ postgresql:
     primary:
       persistence:
         enabled: true
-        size: 2Gi
-        storageClass: ""
+        size: 10Gi
       resources:
         limits:
+          cpu: 1000m
+          memory: 1Gi
+        requests:
           cpu: 500m
           memory: 512Mi
-        requests:
-          cpu: 200m
-          memory: 256Mi
+    readReplicas:
+      replicaCount: 1
+      persistence:
+        enabled: true
+        size: 10Gi
     volumePermissions:
       enabled: true
 
@@ -107,21 +114,17 @@ vault:
         annotations:
           cert-manager.io/cluster-issuer: selfsigned-issuer
         hosts:
-          - host: vault.localhost
+          - host: vault.staging.example.com
             paths:
               - /
         tls:
           - secretName: vault-tls
             hosts:
-              - vault.localhost
+              - vault.staging.example.com
       dataStorage:
         enabled: true
-        size: 2Gi
-        storageClass: "hostpath"
+        size: 10Gi
         accessMode: ReadWriteOnce
-      persistentVolumeClaimRetentionPolicy:
-        whenDeleted: Retain
-        whenScaled: Retain
 
 open_webui:
   enabled: true
@@ -140,21 +143,21 @@ open_webui:
       class: "nginx"
       annotations:
         cert-manager.io/cluster-issuer: selfsigned-issuer
-      host: "chat.localhost"
+      host: "chat.staging.example.com"
       tls:
         - hosts:
-            - "chat.localhost"
+            - "chat.staging.example.com"
           secretName: "open-webui-tls"
     resources:
       limits:
-        cpu: 500m
-        memory: 2Gi
+        cpu: 1000m
+        memory: 4Gi
       requests:
-        cpu: 200m
-        memory: 512Mi
+        cpu: 500m
+        memory: 1Gi
     persistence:
       enabled: true
-      size: 2Gi
+      size: 10Gi
 
 n8n:
   enabled: true
@@ -167,11 +170,11 @@ n8n:
     main:
       resources:
         requests:
-          cpu: 100m
-          memory: 128Mi
+          cpu: 200m
+          memory: 256Mi
         limits:
-          cpu: 512m
-          memory: 512Mi
+          cpu: 1000m
+          memory: 1Gi
     db:
       type: postgresdb
     externalPostgresql:
@@ -180,17 +183,17 @@ n8n:
       enabled: true
       className: nginx
       hosts:
-        - host: n8n.localhost
+        - host: n8n.staging.example.com
           paths:
             - path: /
               pathType: Prefix
       tls:
         - hosts:
-            - n8n.localhost
+            - n8n.staging.example.com
           secretName: n8n-tls
 
 monitoring:
-  enabled: false
+  enabled: true
   name: kube-prometheus-stack
   namespace: monitoring
   chart: kube-prometheus-stack
@@ -199,111 +202,50 @@ monitoring:
   values:
     prometheus:
       prometheusSpec:
-        retention: 7d
+        retention: 15d
         resources:
           requests:
-            cpu: 200m
-            memory: 512Mi
+            cpu: 500m
+            memory: 1Gi
           limits:
-            cpu: 1000m
-            memory: 2Gi
+            cpu: 2000m
+            memory: 4Gi
         storageSpec:
           volumeClaimTemplate:
             spec:
               accessModes: ["ReadWriteOnce"]
               resources:
                 requests:
-                  storage: 10Gi
+                  storage: 50Gi
     grafana:
       enabled: true
-      adminPassword: admin
       ingress:
         enabled: true
         ingressClassName: nginx
         annotations:
           cert-manager.io/cluster-issuer: selfsigned-issuer
         hosts:
-          - grafana.localhost
+          - grafana.staging.example.com
         tls:
           - secretName: grafana-tls
             hosts:
-              - grafana.localhost
+              - grafana.staging.example.com
       resources:
         requests:
-          cpu: 100m
-          memory: 128Mi
+          cpu: 200m
+          memory: 256Mi
         limits:
           cpu: 500m
           memory: 512Mi
     alertmanager:
       enabled: true
-      alertmanagerSpec:
-        resources:
-          requests:
-            cpu: 50m
-            memory: 64Mi
-          limits:
-            cpu: 200m
-            memory: 256Mi
     nodeExporter:
       enabled: true
     kubeStateMetrics:
       enabled: true
 
-argocd:
-  enabled: false
-  name: argocd
-  namespace: argocd
-  chart: argo-cd
-  version: 9.4.3
-  repository: https://argoproj.github.io/argo-helm
-  values:
-    global:
-      domain: argocd.localhost
-    server:
-      ingress:
-        enabled: true
-        ingressClassName: nginx
-        annotations:
-          cert-manager.io/cluster-issuer: selfsigned-issuer
-        tls: true
-      resources:
-        requests:
-          cpu: 100m
-          memory: 128Mi
-        limits:
-          cpu: 500m
-          memory: 512Mi
-    controller:
-      resources:
-        requests:
-          cpu: 250m
-          memory: 256Mi
-        limits:
-          cpu: 1000m
-          memory: 1Gi
-    repoServer:
-      resources:
-        requests:
-          cpu: 100m
-          memory: 128Mi
-        limits:
-          cpu: 500m
-          memory: 512Mi
-    redis:
-      resources:
-        requests:
-          cpu: 50m
-          memory: 64Mi
-        limits:
-          cpu: 200m
-          memory: 256Mi
-    configs:
-      params:
-        server.insecure: true
-
 redis:
-  enabled: false
+  enabled: true
   name: redis
   namespace: redis
   chart: redis
@@ -316,11 +258,11 @@ redis:
     master:
       persistence:
         enabled: true
-        size: 2Gi
+        size: 5Gi
       resources:
         requests:
-          cpu: 100m
-          memory: 128Mi
+          cpu: 200m
+          memory: 256Mi
         limits:
           cpu: 500m
           memory: 512Mi

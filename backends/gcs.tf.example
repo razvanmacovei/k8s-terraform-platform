@@ -1,0 +1,13 @@
+# GCS Backend Configuration Example
+# Copy this block into modules/providers.tf inside the terraform {} block
+#
+# Prerequisites:
+#   - GCS bucket created
+#   - Service account with storage.objects access
+
+terraform {
+  backend "gcs" {
+    bucket = "my-terraform-state-bucket"
+    prefix = "k8s-platform/terraform.tfstate"
+  }
+}
