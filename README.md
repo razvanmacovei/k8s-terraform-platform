@@ -289,4 +289,4 @@ Contributions are welcome! Please:
 
 ## License
 
-This project is open source. See individual Helm chart licenses for third-party components.
+This project is licensed under the [Apache License 2.0](LICENSE). See individual Helm chart licenses for third-party components.
