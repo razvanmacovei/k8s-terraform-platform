@@ -1,6 +1,6 @@
 defaults:
-  cluster_name: docker-desktop
-  env: dev
+  cluster_name: production-cluster
+  env: production
   kubeconfig_path: "~/.kube/config"
 
 namespaces:
@@ -24,19 +24,29 @@ ingress_nginx:
   values:
     enabled: true
     controller:
-      hostNetwork: true
       kind: Deployment
+      replicaCount: 3
       service:
         type: LoadBalancer
       metrics:
         enabled: true
       admissionWebhooks:
-        enabled: false
+        enabled: true
       ingressClassResource:
         name: nginx
-      updateStrategy:
-        type: RollingUpdate
-        rollingUpdate:
+      resources:
+        requests:
+          cpu: 500m
+          memory: 512Mi
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+      autoscaling:
+        enabled: true
+        minReplicas: 3
+        maxReplicas: 10
+        targetCPUUtilizationPercentage: 70
+        targetMemoryUtilizationPercentage: 80
 
 cert_manager:
   enabled: true
@@ -48,18 +58,19 @@ cert_manager:
   values:
     crds:
       enabled: true
+    replicaCount: 2
     ingressShim:
-      defaultIssuerName: selfsigned-issuer
+      defaultIssuerName: letsencrypt-prod
       defaultIssuerKind: ClusterIssuer
     extraArgs:
       - --enable-certificate-owner-ref=true
-  postInstall:
-    - apiVersion: cert-manager.io/v1
-      kind: ClusterIssuer
-      metadata:
-        name: selfsigned-issuer
-      spec:
-        selfSigned: {}
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
 
 postgresql:
   enabled: true
@@ -72,16 +83,24 @@ postgresql:
     primary:
       persistence:
         enabled: true
-        size: 2Gi
-        storageClass: ""
+        size: 50Gi
       resources:
         limits:
-          cpu: 500m
-          memory: 512Mi
+          cpu: 2000m
+          memory: 4Gi
         requests:
-          cpu: 200m
-          memory: 256Mi
+          cpu: 1000m
+          memory: 2Gi
+    readReplicas:
+      replicaCount: 2
+      persistence:
+        enabled: true
+        size: 50Gi
+    metrics:
+      enabled: true
     volumePermissions:
+      enabled: true
+    backup:
       enabled: true
 
 vault:
@@ -96,32 +115,39 @@ vault:
       enabled: true
     injector:
       enabled: true
+      replicas: 2
     ui:
       enabled: true
     server:
-      standalone:
+      ha:
         enabled: true
+        replicas: 3
+        raft:
+          enabled: true
       ingress:
         enabled: true
         ingressClassName: nginx
         annotations:
-          cert-manager.io/cluster-issuer: selfsigned-issuer
+          cert-manager.io/cluster-issuer: letsencrypt-prod
         hosts:
-          - host: vault.localhost
+          - host: vault.example.com
             paths:
               - /
         tls:
           - secretName: vault-tls
             hosts:
-              - vault.localhost
+              - vault.example.com
       dataStorage:
         enabled: true
-        size: 2Gi
-        storageClass: "hostpath"
+        size: 50Gi
         accessMode: ReadWriteOnce
-      persistentVolumeClaimRetentionPolicy:
-        whenDeleted: Retain
-        whenScaled: Retain
+      resources:
+        requests:
+          cpu: 500m
+          memory: 512Mi
+        limits:
+          cpu: 2000m
+          memory: 2Gi
 
 open_webui:
   enabled: true
@@ -139,22 +165,22 @@ open_webui:
       enabled: true
       class: "nginx"
       annotations:
-        cert-manager.io/cluster-issuer: selfsigned-issuer
-      host: "chat.localhost"
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+      host: "chat.example.com"
       tls:
         - hosts:
-            - "chat.localhost"
+            - "chat.example.com"
           secretName: "open-webui-tls"
     resources:
       limits:
-        cpu: 500m
-        memory: 2Gi
+        cpu: 2000m
+        memory: 8Gi
       requests:
-        cpu: 200m
-        memory: 512Mi
+        cpu: 1000m
+        memory: 2Gi
     persistence:
       enabled: true
-      size: 2Gi
+      size: 50Gi
 
 n8n:
   enabled: true
@@ -167,11 +193,11 @@ n8n:
     main:
       resources:
         requests:
-          cpu: 100m
-          memory: 128Mi
-        limits:
-          cpu: 512m
+          cpu: 500m
           memory: 512Mi
+        limits:
+          cpu: 2000m
+          memory: 2Gi
     db:
       type: postgresdb
     externalPostgresql:
@@ -180,17 +206,17 @@ n8n:
       enabled: true
       className: nginx
       hosts:
-        - host: n8n.localhost
+        - host: n8n.example.com
           paths:
             - path: /
               pathType: Prefix
       tls:
         - hosts:
-            - n8n.localhost
+            - n8n.example.com
           secretName: n8n-tls
 
 monitoring:
-  enabled: false
+  enabled: true
   name: kube-prometheus-stack
   namespace: monitoring
   chart: kube-prometheus-stack
@@ -199,59 +225,53 @@ monitoring:
   values:
     prometheus:
       prometheusSpec:
-        retention: 7d
+        retention: 30d
         resources:
           requests:
-            cpu: 200m
-            memory: 512Mi
-          limits:
             cpu: 1000m
             memory: 2Gi
+          limits:
+            cpu: 4000m
+            memory: 8Gi
         storageSpec:
           volumeClaimTemplate:
             spec:
               accessModes: ["ReadWriteOnce"]
               resources:
                 requests:
-                  storage: 10Gi
+                  storage: 200Gi
     grafana:
       enabled: true
-      adminPassword: admin
+      replicas: 2
       ingress:
         enabled: true
         ingressClassName: nginx
         annotations:
-          cert-manager.io/cluster-issuer: selfsigned-issuer
+          cert-manager.io/cluster-issuer: letsencrypt-prod
         hosts:
-          - grafana.localhost
+          - grafana.example.com
         tls:
           - secretName: grafana-tls
             hosts:
-              - grafana.localhost
+              - grafana.example.com
       resources:
         requests:
-          cpu: 100m
-          memory: 128Mi
-        limits:
           cpu: 500m
           memory: 512Mi
+        limits:
+          cpu: 1000m
+          memory: 1Gi
     alertmanager:
       enabled: true
       alertmanagerSpec:
-        resources:
-          requests:
-            cpu: 50m
-            memory: 64Mi
-          limits:
-            cpu: 200m
-            memory: 256Mi
+        replicas: 2
     nodeExporter:
       enabled: true
     kubeStateMetrics:
       enabled: true
 
 argocd:
-  enabled: false
+  enabled: true
   name: argocd
   namespace: argocd
   chart: argo-cd
@@ -259,68 +279,77 @@ argocd:
   repository: https://argoproj.github.io/argo-helm
   values:
     global:
-      domain: argocd.localhost
+      domain: argocd.example.com
     server:
+      replicas: 2
       ingress:
         enabled: true
         ingressClassName: nginx
         annotations:
-          cert-manager.io/cluster-issuer: selfsigned-issuer
+          cert-manager.io/cluster-issuer: letsencrypt-prod
         tls: true
       resources:
         requests:
-          cpu: 100m
-          memory: 128Mi
-        limits:
-          cpu: 500m
-          memory: 512Mi
-    controller:
-      resources:
-        requests:
-          cpu: 250m
+          cpu: 200m
           memory: 256Mi
         limits:
           cpu: 1000m
           memory: 1Gi
-    repoServer:
+    controller:
+      replicas: 1
       resources:
         requests:
-          cpu: 100m
-          memory: 128Mi
-        limits:
           cpu: 500m
           memory: 512Mi
-    redis:
+        limits:
+          cpu: 2000m
+          memory: 2Gi
+    repoServer:
+      replicas: 2
       resources:
         requests:
-          cpu: 50m
-          memory: 64Mi
-        limits:
           cpu: 200m
           memory: 256Mi
+        limits:
+          cpu: 1000m
+          memory: 1Gi
     configs:
       params:
-        server.insecure: true
+        server.insecure: false
 
 redis:
-  enabled: false
+  enabled: true
   name: redis
   namespace: redis
   chart: redis
   version: 20.11.3
   repository: oci://registry-1.docker.io/bitnamicharts
   values:
-    architecture: standalone
+    architecture: replication
     auth:
       enabled: true
     master:
       persistence:
         enabled: true
-        size: 2Gi
+        size: 20Gi
       resources:
         requests:
-          cpu: 100m
-          memory: 128Mi
+          cpu: 500m
+          memory: 512Mi
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+    replica:
+      replicaCount: 2
+      persistence:
+        enabled: true
+        size: 20Gi
+      resources:
+        requests:
+          cpu: 250m
+          memory: 256Mi
         limits:
           cpu: 500m
           memory: 512Mi
+    metrics:
+      enabled: true
