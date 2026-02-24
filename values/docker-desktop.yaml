@@ -368,11 +368,16 @@ podinfo:
         memory: 128Mi
 
 x402:
-  enabled: false
+  enabled: true
   name: x402-k8s-operator
   namespace: x402-system
   chart: x402-k8s-operator
-  version: 0.0.3
+  version: 0.0.5
   repository: oci://ghcr.io/razvanmacovei/charts
   values:
-    replicas: 2
+    replicas: 1
+    createNamespace: false
+    serviceMonitor:
+      enabled: true
+      labels:
+        release: kube-prometheus-stack

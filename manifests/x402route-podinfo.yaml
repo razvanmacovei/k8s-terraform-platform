@@ -1,0 +1,24 @@
+apiVersion: x402.io/v1alpha1
+kind: X402Route
+metadata:
+  name: podinfo-payments
+  namespace: podinfo
+spec:
+  ingressRef:
+    name: podinfo
+  payment:
+    wallet: "0x4DEF22cad784C9fd21272e545F349Fea83BF8764"
+    network: base-sepolia
+    defaultPrice: "0.001"
+    facilitatorURL: "https://x402.org/facilitator"
+  routes:
+    # Free routes
+    - path: "/healthz"
+      free: true
+    - path: "/readyz"
+      free: true
+    - path: "/"
+      free: true
+
+    # Paid routes
+    - path: "/api/*"
