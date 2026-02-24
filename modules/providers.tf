@@ -15,6 +15,11 @@ terraform {
       version = "~> 3.2"
     }
   }
+
+  backend "kubernetes" {
+    secret_suffix = "k8s-platform"
+    namespace     = "terraform-state"
+  }
 }
 
 provider "kubernetes" {

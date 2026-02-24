@@ -71,7 +71,7 @@ cp .env.example .env
 
 ```bash
 # Using Make
-make init
+make init ENV=docker-desktop
 make apply ENV=docker-desktop
 
 # Or using the setup script
@@ -177,15 +177,13 @@ myapp:
     # Application-specific Helm values
 ```
 
-### Remote State Backend
+### State Backend
 
-The `backends/` directory contains examples for configuring remote state:
+Terraform state is stored **inside the Kubernetes cluster** as Secrets in the `terraform-state` namespace. This is configured automatically — `make init` creates the namespace and `terraform init` sets up the backend. Each environment gets its own Secret (e.g., `tfstate-docker-desktop-k8s-platform`).
 
-- `backends/s3.tf.example` - AWS S3 backend
-- `backends/gcs.tf.example` - Google Cloud Storage backend
-- `backends/azurerm.tf.example` - Azure Storage backend
+No external storage (S3, GCS, etc.) is required. State locking is built-in via Kubernetes Lease objects.
 
-Copy the relevant example into `modules/providers.tf` and configure with your credentials.
+> **Alternative backends:** The `backends/` directory contains examples for S3, GCS, Azure, and Kubernetes if you want to switch. Copy the relevant example into `modules/providers.tf` and update the `backend` block.
 
 ## Usage Reference
 
@@ -217,7 +215,7 @@ make destroy ENV=production        # Destroy infrastructure (production requires
 
 # Utilities
 make help                          # Show all available commands
-make init                          # Initialize Terraform
+make init ENV=docker-desktop       # Initialize Terraform (creates state namespace)
 make list                          # List available environments
 make fmt                           # Format Terraform files
 make validate                      # Validate configuration
@@ -230,7 +228,13 @@ make output                        # Show Terraform outputs
 ### Manual Terraform
 
 ```bash
+# Set kube env vars for the backend before any terraform command
+export KUBE_CONFIG_PATH=~/.kube/config
+export KUBE_CTX=docker-desktop
+
+kubectl create namespace terraform-state 2>/dev/null || true
 terraform -chdir=modules init
+terraform -chdir=modules workspace select docker-desktop || terraform -chdir=modules workspace new docker-desktop
 terraform -chdir=modules plan  -var="values_path=values/docker-desktop.yaml"
 terraform -chdir=modules apply -var="values_path=values/docker-desktop.yaml" -auto-approve
 ```
@@ -255,9 +259,10 @@ k8s-terraform-platform/
 ├── backends/
 │   ├── s3.tf.example                 # AWS S3 backend config
 │   ├── gcs.tf.example                # GCP GCS backend config
-│   └── azurerm.tf.example            # Azure backend config
+│   ├── azurerm.tf.example            # Azure backend config
+│   └── kubernetes.tf.example         # Kubernetes backend config (active)
 ├── modules/
-│   ├── providers.tf                  # Terraform & provider config
+│   ├── providers.tf                  # Terraform, providers & Kubernetes backend
 │   ├── variables.tf                  # Input variables with validation
 │   ├── locals.tf                     # Local values (YAML loading)
 │   ├── main.tf                       # Main configuration

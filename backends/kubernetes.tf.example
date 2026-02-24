@@ -1,0 +1,18 @@
+# Kubernetes Backend Configuration Example
+# Copy this block into modules/providers.tf inside the terraform {} block
+#
+# Prerequisites:
+#   - Kubernetes cluster accessible via kubeconfig
+#   - RBAC permissions to create/read/update Secrets in the target namespace
+#   - The namespace must exist before running terraform init
+#
+# State is stored as a Kubernetes Secret in the specified namespace.
+# State locking is built-in via Lease objects.
+
+terraform {
+  backend "kubernetes" {
+    secret_suffix = "k8s-platform"
+    namespace     = "terraform-state"
+    config_path   = "~/.kube/config"
+  }
+}
