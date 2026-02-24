@@ -1,5 +1,6 @@
 defaults:
   cluster_name: production-cluster
+  kube_context: production-cluster
   env: production
   kubeconfig_path: "~/.kube/config"
 
@@ -110,6 +111,10 @@ vault:
   chart: vault
   version: 0.30.0
   repository: https://helm.releases.hashicorp.com
+  auto_init:
+    enabled: true
+    key_shares: 5
+    key_threshold: 3
   values:
     global:
       enabled: true

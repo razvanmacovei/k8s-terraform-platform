@@ -37,17 +37,17 @@ Managed by Terraform + Helm │ Config via YAML values files
 
 ## Applications & Services
 
-| Application | Description | Default (Dev) | Helm Chart Version |
-|-------------|-------------|:-------------:|:------------------:|
-| **Ingress NGINX** | Ingress controller for HTTP/HTTPS routing | Enabled | 4.14.3 |
-| **Cert Manager** | Automated TLS certificate management | Enabled | v1.17.1 |
-| **HashiCorp Vault** | Secrets management and encryption | Enabled | 0.30.0 |
-| **PostgreSQL** | Relational database (Bitnami) | Enabled | 16.6.7 |
-| **Open WebUI** | Web interface for AI chat applications | Enabled | 6.11.0 |
-| **n8n** | Workflow automation platform | Enabled | 1.5.10 |
-| **Prometheus + Grafana** | Monitoring and observability stack | Disabled | 82.2.0 |
-| **ArgoCD** | GitOps continuous delivery | Disabled | 9.4.3 |
-| **Redis** | In-memory cache and data store | Disabled | 20.11.3 |
+| Application              | Description                               | Default (Dev) | Helm Chart Version |
+| ------------------------ | ----------------------------------------- | :-----------: | :----------------: |
+| **Ingress NGINX**        | Ingress controller for HTTP/HTTPS routing |    Enabled    |       4.14.3       |
+| **Cert Manager**         | Automated TLS certificate management      |    Enabled    |      v1.17.1       |
+| **HashiCorp Vault**      | Secrets management and encryption         |    Enabled    |       0.30.0       |
+| **PostgreSQL**           | Relational database (Bitnami)             |    Enabled    |       16.6.7       |
+| **Open WebUI**           | Web interface for AI chat applications    |    Enabled    |       6.11.0       |
+| **n8n**                  | Workflow automation platform              |    Enabled    |       1.5.10       |
+| **Prometheus + Grafana** | Monitoring and observability stack        |   Disabled    |       82.2.0       |
+| **ArgoCD**               | GitOps continuous delivery                |   Disabled    |       9.4.3        |
+| **Redis**                | In-memory cache and data store            |   Disabled    |      20.11.3       |
 
 ## Prerequisites
 
@@ -70,43 +70,57 @@ cp .env.example .env
 ### 2. Deploy
 
 ```bash
-# Using the setup script
+# Using Make
+make init
+make apply ENV=docker-desktop
+
+# Or using the setup script
 chmod +x setup.sh
 ./setup.sh values/docker-desktop.yaml
-
-# Or using Make
-make dev
 ```
 
 ### 3. Access your services
 
-| Service | URL |
-|---------|-----|
-| Vault | https://vault.localhost |
-| Open WebUI | https://chat.localhost |
-| n8n | https://n8n.localhost |
-| Grafana | https://grafana.localhost (when monitoring enabled) |
-| ArgoCD | https://argocd.localhost (when ArgoCD enabled) |
+| Service    | URL                                                 |
+| ---------- | --------------------------------------------------- |
+| Vault      | https://vault.localhost                             |
+| Open WebUI | https://chat.localhost                              |
+| n8n        | https://n8n.localhost                               |
+| Grafana    | https://grafana.localhost (when monitoring enabled) |
+| ArgoCD     | https://argocd.localhost (when ArgoCD enabled)      |
+
+Vault is automatically initialized and unsealed during deploy. Retrieve credentials with:
+
+```bash
+terraform -chdir=./modules output -raw vault_root_token
+terraform -chdir=./modules output -raw vault_unseal_keys
+```
 
 ## Multi-Environment Support
 
 The platform includes pre-configured values files for different environments:
 
-| Environment | Values File | Description |
-|-------------|------------|-------------|
-| **Dev** | `values/docker-desktop.yaml` | Local development with minimal resources |
-| **Staging** | `values/staging.yaml` | Pre-production with moderate resources and monitoring |
-| **Production** | `values/production.yaml` | Full HA setup with replicas, autoscaling, and monitoring |
+| Environment    | Values File                  | Description                                              |
+| -------------- | ---------------------------- | -------------------------------------------------------- |
+| **Dev**        | `values/docker-desktop.yaml` | Local development with minimal resources                 |
+| **Staging**    | `values/staging.yaml`        | Pre-production with moderate resources and monitoring    |
+| **Production** | `values/production.yaml`     | Full HA setup with replicas, autoscaling, and monitoring |
 
 ```bash
 # Deploy to specific environments
-make dev                    # Local development
-make staging                # Staging environment
-make production             # Production (with confirmation prompt)
+make apply ENV=docker-desktop    # Local development
+make apply ENV=staging           # Staging environment
+make apply ENV=production        # Production (with confirmation prompt)
 
 # Or with setup.sh
 ./setup.sh values/staging.yaml
 ./setup.sh values/production.yaml
+```
+
+To add a custom environment, create a new values file (e.g. `values/my-env.yaml`) and use it directly:
+
+```bash
+make apply ENV=my-env
 ```
 
 ## Configuration
@@ -117,13 +131,13 @@ Toggle any service by setting `enabled: true/false` in your values file:
 
 ```yaml
 monitoring:
-  enabled: true   # Enable the Prometheus + Grafana stack
+  enabled: true # Enable the Prometheus + Grafana stack
 
 argocd:
-  enabled: false  # Disable ArgoCD
+  enabled: false # Disable ArgoCD
 
 redis:
-  enabled: true   # Enable Redis cache
+  enabled: true # Enable Redis cache
 ```
 
 ### Adding New Applications
@@ -150,7 +164,7 @@ resource "helm_release" "myapp" {
 
 ```yaml
 namespaces:
-  - myapp  # Add the namespace
+  - myapp # Add the namespace
 
 myapp:
   enabled: true
@@ -196,17 +210,21 @@ Examples:
 ### Makefile Commands
 
 ```bash
-make help          # Show all available commands
-make init          # Initialize Terraform
-make plan          # Plan changes
-make apply         # Apply changes
-make destroy       # Destroy infrastructure
-make fmt           # Format Terraform files
-make validate      # Validate configuration
-make lint          # Run TFLint
-make clean         # Clean Terraform cache
-make status        # Show current state
-make output        # Show Terraform outputs
+# Terraform workflow (ENV required)
+make plan ENV=docker-desktop       # Plan changes
+make apply ENV=staging             # Apply changes
+make destroy ENV=production        # Destroy infrastructure (production requires confirmation)
+
+# Utilities
+make help                          # Show all available commands
+make init                          # Initialize Terraform
+make list                          # List available environments
+make fmt                           # Format Terraform files
+make validate                      # Validate configuration
+make lint                          # Run TFLint
+make clean                         # Clean Terraform cache
+make status                        # Show current state
+make output                        # Show Terraform outputs
 ```
 
 ### Manual Terraform
@@ -255,6 +273,8 @@ k8s-terraform-platform/
 │   ├── redis.tf                      # Redis cache
 │   ├── apps.tf                       # Shared Helm repo management
 │   └── outputs.tf                    # Output values
+├── scripts/
+│   └── vault-init-unseal.sh          # Vault auto-init & unseal
 ├── values/
 │   ├── docker-desktop.yaml           # Dev environment config
 │   ├── staging.yaml                  # Staging environment config
@@ -270,9 +290,9 @@ k8s-terraform-platform/
 
 ```bash
 # Destroy specific environment
-make dev-destroy
-make staging-destroy
-make production-destroy      # Requires typing confirmation
+make destroy ENV=docker-desktop
+make destroy ENV=staging
+make destroy ENV=production        # Requires typing confirmation
 
 # Or using setup.sh
 ./setup.sh values/docker-desktop.yaml destroy

@@ -1,5 +1,6 @@
 defaults:
   cluster_name: docker-desktop
+  kube_context: docker-desktop
   env: dev
   kubeconfig_path: "~/.kube/config"
 
@@ -93,6 +94,10 @@ vault:
   chart: vault
   version: 0.30.0
   repository: https://helm.releases.hashicorp.com
+  auto_init:
+    enabled: true
+    key_shares: 1
+    key_threshold: 1
   values:
     global:
       enabled: true
@@ -328,18 +333,11 @@ redis:
           memory: 512Mi
 
 x402:
-  enabled: true
+  enabled: false
   name: x402-k8s-operator
   namespace: x402-system
   chart: x402-k8s-operator
-  version: 0.0.2
+  version: 0.0.3
   repository: oci://ghcr.io/razvanmacovei/charts
   values:
     replicas: 2
-    createNamespace: false
-    leaderElection:
-      enabled: true
-    image:
-      repository: x402-k8s-operator
-      tag: latest
-      pullPolicy: Never

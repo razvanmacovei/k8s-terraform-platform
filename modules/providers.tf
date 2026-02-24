@@ -19,12 +19,12 @@ terraform {
 
 provider "kubernetes" {
   config_path    = local.values.defaults.kubeconfig_path
-  config_context = local.values.defaults.cluster_name
+  config_context = local.values.defaults.kube_context
 }
 
 provider "helm" {
   kubernetes {
     config_path    = local.values.defaults.kubeconfig_path
-    config_context = local.values.defaults.cluster_name
+    config_context = local.values.defaults.kube_context
   }
 }

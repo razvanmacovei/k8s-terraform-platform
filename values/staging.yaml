@@ -1,5 +1,6 @@
 defaults:
   cluster_name: staging-cluster
+  kube_context: staging-cluster
   env: staging
   kubeconfig_path: "~/.kube/config"
 
@@ -98,6 +99,10 @@ vault:
   chart: vault
   version: 0.30.0
   repository: https://helm.releases.hashicorp.com
+  auto_init:
+    enabled: true
+    key_shares: 3
+    key_threshold: 2
   values:
     global:
       enabled: true
