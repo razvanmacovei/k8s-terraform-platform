@@ -11,32 +11,26 @@ variable "values_path" {
 variable "POSTGRESQL_USERNAME" {
   description = "PostgreSQL Username"
   type        = string
-
-  validation {
-    condition     = length(var.POSTGRESQL_USERNAME) > 0
-    error_message = "PostgreSQL username must not be empty."
-  }
+  default     = "postgres"
 }
 
 variable "POSTGRESQL_PASSWORD" {
   description = "PostgreSQL Password"
   type        = string
+  default     = ""
   sensitive   = true
 }
 
 variable "POSTGRESQL_DATABASE" {
   description = "PostgreSQL Database"
   type        = string
-
-  validation {
-    condition     = can(regex("^[a-zA-Z][a-zA-Z0-9_]*$", var.POSTGRESQL_DATABASE))
-    error_message = "Database name must start with a letter and contain only alphanumeric characters and underscores."
-  }
+  default     = "app"
 }
 
 variable "POSTGRESQL_REPLICATION_PASSWORD" {
   description = "PostgreSQL Replication Password"
   type        = string
+  default     = ""
   sensitive   = true
 }
 

@@ -7,7 +7,13 @@ resource "helm_release" "vault" {
   version    = local.values.vault.version
 
   values = [yamlencode(local.values.vault.values)]
-  
-  wait = true
+
+  depends_on = [
+    kubernetes_namespace.namespaces,
+    helm_release.ingress_nginx,
+    null_resource.selfsigned_issuer,
+  ]
+
+  wait          = true
   wait_for_jobs = true
 }

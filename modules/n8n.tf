@@ -22,9 +22,12 @@ resource "helm_release" "n8n" {
     name  = "externalPostgresql.database"
     value = var.POSTGRESQL_DATABASE
   }
-  
+
   depends_on = [
-    helm_release.postgresql
+    kubernetes_namespace.namespaces,
+    helm_release.ingress_nginx,
+    null_resource.selfsigned_issuer,
+    helm_release.postgresql,
   ]
 
   wait          = true

@@ -8,8 +8,13 @@ resource "helm_release" "open_webui" {
 
   values = [yamlencode(local.values.open_webui.values)]
 
-  depends_on = [null_resource.add_open_webui_repo]
+  depends_on = [
+    kubernetes_namespace.namespaces,
+    helm_release.ingress_nginx,
+    null_resource.selfsigned_issuer,
+    null_resource.add_open_webui_repo,
+  ]
 
-  wait = true
+  wait          = true
   wait_for_jobs = true
 }

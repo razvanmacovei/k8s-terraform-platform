@@ -27,12 +27,14 @@ resource "helm_release" "postgresql" {
     name  = "auth.postgresPassword"
     value = var.POSTGRESQL_PASSWORD
   }
-  
+
   set {
     name  = "auth.replicationPassword"
     value = var.POSTGRESQL_REPLICATION_PASSWORD
   }
-  
+
+  depends_on = [kubernetes_namespace.namespaces]
+
   wait          = true
   wait_for_jobs = true
 }

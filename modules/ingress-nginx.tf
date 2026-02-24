@@ -5,9 +5,11 @@ resource "helm_release" "ingress_nginx" {
   chart      = local.values.ingress_nginx.chart
   version    = local.values.ingress_nginx.version
   repository = local.values.ingress_nginx.repository
-  
+
   values = [yamlencode(local.values.ingress_nginx.values)]
-  
-  wait = true
+
+  depends_on = [kubernetes_namespace.namespaces]
+
+  wait          = true
   wait_for_jobs = true
 }

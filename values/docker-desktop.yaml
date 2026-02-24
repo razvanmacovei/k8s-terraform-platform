@@ -13,6 +13,7 @@ namespaces:
   - monitoring
   - argocd
   - redis
+  - x402-system
 
 ingress_nginx:
   enabled: true
@@ -25,6 +26,7 @@ ingress_nginx:
     enabled: true
     controller:
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       kind: Deployment
       service:
         type: LoadBalancer
@@ -62,7 +64,7 @@ cert_manager:
         selfSigned: {}
 
 postgresql:
-  enabled: true
+  enabled: false
   name: postgresql
   namespace: postgresql
   chart: postgresql
@@ -128,7 +130,7 @@ open_webui:
   name: open-webui
   namespace: open-webui
   chart: open-webui
-  version: 6.11.0
+  version: 12.5.0
   repository: https://helm.openwebui.com
   values:
     ollama:
@@ -157,11 +159,11 @@ open_webui:
       size: 2Gi
 
 n8n:
-  enabled: true
+  enabled: false
   name: n8n
   namespace: n8n
   chart: n8n
-  version: 1.5.10
+  version: 1.16.29
   repository: https://community-charts.github.io/helm-charts
   values:
     main:
@@ -324,3 +326,20 @@ redis:
         limits:
           cpu: 500m
           memory: 512Mi
+
+x402:
+  enabled: true
+  name: x402-k8s-operator
+  namespace: x402-system
+  chart: x402-k8s-operator
+  version: 0.0.2
+  repository: oci://ghcr.io/razvanmacovei/charts
+  values:
+    replicas: 2
+    createNamespace: false
+    leaderElection:
+      enabled: true
+    image:
+      repository: x402-k8s-operator
+      tag: latest
+      pullPolicy: Never

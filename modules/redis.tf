@@ -16,6 +16,8 @@ resource "helm_release" "redis" {
     }
   }
 
+  depends_on = [kubernetes_namespace.namespaces]
+
   wait          = true
   wait_for_jobs = true
 }
