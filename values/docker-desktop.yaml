@@ -15,6 +15,7 @@ namespaces:
   - argocd
   - redis
   - x402-system
+  - podinfo
 
 ingress_nginx:
   enabled: true
@@ -197,7 +198,7 @@ n8n:
           secretName: n8n-tls
 
 monitoring:
-  enabled: false
+  enabled: true
   name: kube-prometheus-stack
   namespace: monitoring
   chart: kube-prometheus-stack
@@ -252,6 +253,9 @@ monitoring:
           limits:
             cpu: 200m
             memory: 256Mi
+    prometheus-node-exporter:
+      hostRootFsMount:
+        enabled: false
     nodeExporter:
       enabled: true
     kubeStateMetrics:
@@ -331,6 +335,37 @@ redis:
         limits:
           cpu: 500m
           memory: 512Mi
+
+podinfo:
+  enabled: true
+  name: podinfo
+  namespace: podinfo
+  chart: podinfo
+  version: 6.10.1
+  repository: https://stefanprodan.github.io/podinfo
+  values:
+    replicaCount: 1
+    ingress:
+      enabled: true
+      className: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: selfsigned-issuer
+      hosts:
+        - host: podinfo.localhost
+          paths:
+            - path: /
+              pathType: ImplementationSpecific
+      tls:
+        - secretName: podinfo-tls
+          hosts:
+            - podinfo.localhost
+    resources:
+      requests:
+        cpu: 100m
+        memory: 32Mi
+      limits:
+        cpu: 250m
+        memory: 128Mi
 
 x402:
   enabled: false
