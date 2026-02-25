@@ -372,7 +372,7 @@ x402:
   name: x402-k8s-operator
   namespace: x402-system
   chart: x402-k8s-operator
-  version: 0.0.5
+  version: 0.0.6
   repository: oci://ghcr.io/razvanmacovei/charts
   values:
     replicas: 1

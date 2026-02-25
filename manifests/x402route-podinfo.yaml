@@ -12,7 +12,7 @@ spec:
     defaultPrice: "0.001"
     facilitatorURL: "https://x402.org/facilitator"
   routes:
-    # Free routes
+    # Free routes — health checks and landing page
     - path: "/healthz"
       free: true
     - path: "/readyz"
@@ -20,5 +20,29 @@ spec:
     - path: "/"
       free: true
 
-    # Paid routes
+    # Conditional route — free with valid API key, paid otherwise
+    - path: "/api/info"
+      mode: conditional
+      conditions:
+        - header: "X-Api-Key"
+          pattern: "^sk-[a-zA-Z0-9]{32,}$"
+          action: free
+
+    # Conditional route — bots pay, browsers are free
+    - path: "/api/echo"
+      mode: conditional
+      price: "0.002"
+      conditions:
+        - header: "User-Agent"
+          pattern: "(?i)(curl|wget|python|go-http|httpie|postman)"
+          action: pay
+        - header: "User-Agent"
+          pattern: "(?i)(mozilla|chrome|safari|firefox|edge)"
+          action: free
+
+    # Premium endpoint — higher price
+    - path: "/api/headers"
+      price: "0.005"
+
+    # Catch-all paid API routes
     - path: "/api/*"
