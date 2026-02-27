@@ -381,3 +381,6 @@ x402:
       enabled: true
       labels:
         release: kube-prometheus-stack
+    grafanaDashboard:
+      enabled: true
+      namespace: monitoring
